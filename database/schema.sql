@@ -1,0 +1,41 @@
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS products (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  category TEXT NOT NULL,
+  unit TEXT NOT NULL,
+  notes TEXT DEFAULT '',
+  habitual INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  status TEXT NOT NULL DEFAULT 'draft'
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL,
+  product_id INTEGER NOT NULL,
+  quantity REAL NOT NULL DEFAULT 0,
+  notes TEXT DEFAULT '',
+  FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
+  FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE,
+  UNIQUE(order_id, product_id)
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_products_name ON products(name);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_items_order_id ON order_items(order_id);

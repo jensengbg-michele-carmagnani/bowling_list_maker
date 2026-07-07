@@ -1,0 +1,20 @@
+{
+  "name": "bowling-list-maker",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Web app mobile-first per ordini settimanali di magazzino.",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",
+    "build": "npm run build --workspace backend && npm run build --workspace frontend",
+    "start": "npm run start --workspace backend",
+    "lint": "npm run lint --workspace frontend",
+    "typecheck": "npm run typecheck --workspace backend && npm run typecheck --workspace frontend"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
