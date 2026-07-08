@@ -9,7 +9,7 @@ import type { Product, Settings } from "../types/domain";
 type Draft = Partial<Product> & { name: string; category: string; unit: string };
 
 export function Products({ settings }: { settings: Settings | null }) {
-  const { data: products, refresh } = useAsync(() => api.products.list(), []);
+  const { data: products, refresh, error } = useAsync(() => api.products.list(), []);
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Product | null>(null);
   const [selected, setSelected] = useState<number[]>([]);
@@ -47,6 +47,11 @@ export function Products({ settings }: { settings: Settings | null }) {
         <p className="text-sm font-semibold text-leaf">Catalogo</p>
         <h1 className="text-2xl font-black">Prodotti</h1>
       </header>
+      {error && (
+        <div className="rounded-lg bg-rose-50 p-3 text-sm font-bold text-rose-900 ring-1 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-100 dark:ring-rose-900">
+          Errore API: {error}
+        </div>
+      )}
       <SearchBar value={query} onChange={setQuery} placeholder="Cerca prodotto" />
 
       <form onSubmit={save} className="grid gap-2 rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800 sm:grid-cols-5">

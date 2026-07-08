@@ -11,9 +11,9 @@ import { formatDate, orderName } from "../utils/format";
 type QuantityMap = Record<number, { quantity: number; notes: string }>;
 
 export function OrderBuilder({ settings, editOrderId, clearEditOrder }: { settings: Settings | null; editOrderId?: number | null; clearEditOrder?: () => void }) {
-  const { data: products } = useAsync(() => api.products.list(), []);
-  const { data: previous } = useAsync(api.orders.previous, []);
-  const { data: lastQuantities } = useAsync(api.orders.lastQuantities, []);
+  const { data: products, error: productsError } = useAsync(() => api.products.list(), []);
+  const { data: previous, error: previousError } = useAsync(api.orders.previous, []);
+  const { data: lastQuantities, error: lastQuantitiesError } = useAsync(api.orders.lastQuantities, []);
   const [name, setName] = useState(orderName());
   const [orderId, setOrderId] = useState<number | null>(null);
   const [query, setQuery] = useState("");
@@ -90,6 +90,11 @@ export function OrderBuilder({ settings, editOrderId, clearEditOrder }: { settin
 
   return (
     <section className="space-y-4">
+      {(productsError || previousError || lastQuantitiesError) && (
+        <div className="rounded-lg bg-rose-50 p-3 text-sm font-bold text-rose-900 ring-1 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-100 dark:ring-rose-900">
+          Errore API: {productsError ?? previousError ?? lastQuantitiesError}
+        </div>
+      )}
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-leaf">Nuova lista</p>

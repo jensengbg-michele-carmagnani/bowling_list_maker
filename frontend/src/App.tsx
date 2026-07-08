@@ -27,6 +27,11 @@ export function App() {
 
   return (
     <Layout page={page} setPage={setPage} dark={dark} setDark={setDark}>
+      {settings.error && (
+        <div className="rounded-lg bg-rose-50 p-3 text-sm font-bold text-rose-900 ring-1 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-100 dark:ring-rose-900">
+          Errore API: {settings.error}
+        </div>
+      )}
       {page === "dashboard" && (
         <div className="space-y-6">
           <Dashboard setPage={setPage} />
