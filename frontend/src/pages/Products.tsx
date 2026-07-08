@@ -1,6 +1,7 @@
 import { Edit3, Plus, Trash2 } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { Button } from "../components/Button";
+import { ProductIcon } from "../components/ProductIcon";
 import { SearchBar } from "../components/SearchBar";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../services/api";
@@ -85,9 +86,7 @@ export function Products({ settings }: { settings: Settings | null }) {
             }}
             className={`flex items-center gap-3 rounded-lg bg-white p-3 ring-1 ${selected.includes(product.id) ? "ring-leaf" : "ring-slate-200"} dark:bg-slate-900 dark:ring-slate-800`}
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-leaf dark:bg-teal-950">
-              <BoxesIcon />
-            </div>
+            <ProductIcon src={product.icon} name={product.name} />
             <div className="min-w-0 flex-1">
               <h3 className="truncate text-base font-black">{product.name}</h3>
               <p className="text-sm text-slate-500">{product.category} · {product.unit}</p>
@@ -99,8 +98,4 @@ export function Products({ settings }: { settings: Settings | null }) {
       </div>
     </section>
   );
-}
-
-function BoxesIcon() {
-  return <span className="text-xl">▣</span>;
 }

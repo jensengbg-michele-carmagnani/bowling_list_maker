@@ -1,6 +1,7 @@
-import { FileDown, Minus, Package, Plus, Send, Star } from "lucide-react";
+import { FileDown, Minus, Plus, Send, Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "../components/Button";
+import { ProductIcon } from "../components/ProductIcon";
 import { SearchBar } from "../components/SearchBar";
 import { useAsync } from "../hooks/useAsync";
 import { useDebouncedEffect } from "../hooks/useDebouncedEffect";
@@ -163,7 +164,7 @@ export function OrderBuilder({ settings, editOrderId, clearEditOrder }: { settin
 function ProductRow({ product, value, onMinus, onPlus, onOpen }: { product: Product; value: number; onMinus: () => void; onPlus: () => void; onOpen: () => void }) {
   return (
     <article onClick={onOpen} className="grid grid-cols-[44px_1fr_44px_58px_44px] items-center gap-2 rounded-lg bg-white p-2 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-teal-50 text-leaf dark:bg-teal-950"><Package size={22} /></div>
+      <ProductIcon src={product.icon} name={product.name} />
       <div className="min-w-0">
         <h3 className="truncate text-base font-black">{product.name}</h3>
         <p className="truncate text-xs font-semibold text-slate-500">{product.category} · {product.unit}</p>
@@ -179,8 +180,14 @@ function ProductSheet({ product, last, note, onNote, onUseLast, onClose }: { pro
   return (
     <div className="fixed inset-0 z-40 flex items-end bg-slate-950/45 p-3" onClick={onClose}>
       <div className="w-full rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900" onClick={(event) => event.stopPropagation()}>
-        <h2 className="text-xl font-black">{product.name}</h2>
-        <p className="text-sm text-slate-500">{product.category} · ultima quantità: {last?.last_quantity ?? "-"} · {formatDate(last?.last_order_date)}</p>
+        <div className="flex items-start gap-3">
+          <ProductIcon src={product.icon} name={product.name} className="h-16 w-16 rounded-2xl" imgClassName="h-12 w-12" />
+          <div className="min-w-0">
+            <h2 className="text-xl font-black">{product.name}</h2>
+            <p className="text-sm text-slate-500">{product.category} · {product.unit}</p>
+            <p className="text-sm text-slate-500">Ultima quantità: {last?.last_quantity ?? "-"} · {formatDate(last?.last_order_date)}</p>
+          </div>
+        </div>
         <textarea className="mt-3 min-h-28 w-full rounded-lg bg-slate-100 p-3 dark:bg-slate-800" placeholder="Note per questo ordine" value={note} onChange={(event) => onNote(event.target.value)} />
         <div className="mt-3 grid grid-cols-2 gap-2">
           <Button variant="muted" onClick={onClose}>Chiudi</Button>

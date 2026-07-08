@@ -1,5 +1,6 @@
 import { Copy, Download, Edit3 } from "lucide-react";
 import { Button } from "../components/Button";
+import { ProductIcon } from "../components/ProductIcon";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../services/api";
 import { formatDate } from "../utils/format";
@@ -25,6 +26,20 @@ export function History({ onEdit }: { onEdit: (orderId: number) => void }) {
               <div>
                 <h3 className="text-lg font-black">{order.name}</h3>
                 <p className="text-sm text-slate-500">{formatDate(order.created_at)} · {order.item_count ?? 0} prodotti</p>
+                {!!order.preview_items?.length && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <div className="flex -space-x-2">
+                      {order.preview_items.slice(0, 3).map((item) => (
+                        <div key={`${order.id}-${item.product_id}`} className="rounded-xl bg-white p-0.5 ring-2 ring-white dark:bg-slate-900 dark:ring-slate-900">
+                          <ProductIcon src={item.icon} name={item.name} className="h-10 w-10 rounded-xl" imgClassName="h-7 w-7" />
+                        </div>
+                      ))}
+                    </div>
+                    <p className="truncate text-xs font-semibold text-slate-500">
+                      {order.preview_items.slice(0, 3).map((item) => item.name).join(" · ")}
+                    </p>
+                  </div>
+                )}
               </div>
               <Button variant="muted" icon={<Copy size={18} />} onClick={() => duplicate(order.id)}>Duplica</Button>
             </div>

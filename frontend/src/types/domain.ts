@@ -4,6 +4,7 @@ export type Product = {
   category: string;
   unit: string;
   notes: string;
+  icon: string;
   habitual: 0 | 1;
   created_at: string;
   updated_at: string;
@@ -16,6 +17,7 @@ export type OrderItem = {
   name: string;
   category: string;
   unit: string;
+  icon?: string;
   quantity: number;
   notes?: string;
   habitual?: 0 | 1;
@@ -28,6 +30,7 @@ export type Order = {
   updated_at: string;
   status: "draft" | "sent";
   items: OrderItem[];
+  preview_items?: OrderItem[];
   item_count?: number;
   total_quantity?: number;
 };

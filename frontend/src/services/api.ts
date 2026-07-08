@@ -34,7 +34,7 @@ export const api = {
     update: (id: number, order: { name?: string; items?: Array<{ productId: number; quantity: number; notes?: string }> }) =>
       request<Order>(`/orders/${id}`, { method: "PUT", body: JSON.stringify(order) }),
     duplicate: (id: number) => request<Order>(`/orders/${id}/duplicate`, { method: "POST" }),
-    previous: () => request<Array<{ product_id: number; quantity: number; name: string; category: string; unit: string }>>("/orders/previous"),
+    previous: () => request<Array<{ product_id: number; quantity: number; name: string; category: string; unit: string; icon?: string }>>("/orders/previous"),
     lastQuantities: () => request<LastQuantity[]>("/orders/last-quantities")
   },
   settings: {

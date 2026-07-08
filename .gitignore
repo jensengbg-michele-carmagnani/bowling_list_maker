@@ -1,7 +1,8 @@
 node_modules/
+.next/
+tsconfig.tsbuildinfo
 dist/
-frontend/dist/
-api/dist/
+server/dist/
 database/data/
 .env
 .DS_Store

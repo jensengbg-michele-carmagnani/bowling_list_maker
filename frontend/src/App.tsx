@@ -11,13 +11,13 @@ import { api } from "./services/api";
 
 export function App() {
   const [page, setPage] = useState<Page>("dashboard");
-  const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
+  const [dark, setDark] = useState(() => typeof window !== "undefined" && window.localStorage.getItem("theme") === "dark");
   const [editOrderId, setEditOrderId] = useState<number | null>(null);
   const settings = useAsync(api.settings.get, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
-    localStorage.setItem("theme", dark ? "dark" : "light");
+    window.localStorage.setItem("theme", dark ? "dark" : "light");
   }, [dark]);
 
   function editOrder(orderId: number) {
