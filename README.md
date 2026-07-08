@@ -3,7 +3,7 @@
 Applicazione per la gestione degli ordini di magazzino, composta da:
 
 - `frontend`: React 19 + Vite + Tailwind + PWA
-- `backend`: Express + TypeScript + Supabase
+- `api`: modulo API centralizzato con Express + TypeScript + Supabase
 
 ## Sviluppo locale
 
@@ -33,7 +33,40 @@ npm run start
 Il repository include una configurazione `vercel.json` che pubblica:
 
 - il frontend statico da `dist`
+- il modulo API centralizzato direttamente dalla cartella root `api/`
 - le API Express come function Vercel tramite `api/[...path].js`
+
+## Struttura cartelle
+
+Le API sono centralizzate nella cartella root `api/`:
+
+- `api/[...path].js`: entrypoint Vercel serverless
+- `api/app.ts`: registrazione middleware ed endpoint
+- `api/server.ts`: avvio locale del modulo API unificato
+- `api/routes/`: endpoint HTTP
+- `api/services/`: logica di business e accesso a Supabase
+- `api/scripts/`: seed e migrazione dati legacy
+- `api/utils/`: utility condivise
+
+Il frontend comunica sempre con il modulo centralizzato tramite il base path `/api`, definito in `frontend/src/services/api.ts`.
+
+## Flusso di deployment
+
+Lo startup e il deploy usano ora un unico modulo API:
+
+```bash
+npm run dev
+npm run build
+npm run start
+```
+
+Script utili:
+
+```bash
+npm run seed:beverages --workspace api
+npm run seed:kitchen --workspace api
+npm run migrate:legacy-sqlite --workspace api
+```
 
 ## Schema Supabase
 
@@ -47,7 +80,7 @@ Il repository include una configurazione `vercel.json` che pubblica:
 Se esiste ancora il file locale `database/data/warehouse.sqlite`, puoi migrare i dati reali con:
 
 ```bash
-npm run migrate:legacy-sqlite --workspace backend
+npm run migrate:legacy-sqlite --workspace api
 ```
 
 Lo script legge SQLite tramite il binario di sistema `sqlite3`, carica prodotti, ordini, righe ordine e impostazioni su Supabase e riallinea le sequence.

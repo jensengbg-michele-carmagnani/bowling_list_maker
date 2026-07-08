@@ -1,15 +1,15 @@
 {
-  "name": "warehouse-orders-backend",
+  "name": "warehouse-orders-api",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "seed:beverages": "tsx src/scripts/seedBeverages.ts",
-    "seed:kitchen": "tsx src/scripts/seedKitchen.ts",
-    "migrate:legacy-sqlite": "tsx src/scripts/migrateLegacySqliteToSupabase.ts"
+    "seed:beverages": "tsx scripts/seedBeverages.ts",
+    "seed:kitchen": "tsx scripts/seedKitchen.ts",
+    "migrate:legacy-sqlite": "tsx scripts/migrateLegacySqliteToSupabase.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",

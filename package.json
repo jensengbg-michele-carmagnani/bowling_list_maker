@@ -4,14 +4,14 @@
   "version": "1.0.0",
   "description": "Web app mobile-first per ordini settimanali di magazzino.",
   "scripts": {
-    "dev": "concurrently \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",
-    "build": "npm run build --workspace backend && npm run build --workspace frontend && rm -rf dist && cp -R frontend/dist dist",
-    "start": "npm run start --workspace backend",
+    "dev": "concurrently \"npm run dev --workspace api\" \"npm run dev --workspace frontend\"",
+    "build": "npm run build --workspace api && npm run build --workspace frontend && rm -rf dist && cp -R frontend/dist dist",
+    "start": "npm run start --workspace api",
     "lint": "npm run lint --workspace frontend",
-    "typecheck": "npm run typecheck --workspace backend && npm run typecheck --workspace frontend"
+    "typecheck": "npm run typecheck --workspace api && npm run typecheck --workspace frontend"
   },
   "workspaces": [
-    "backend",
+    "api",
     "frontend"
   ],
   "devDependencies": {

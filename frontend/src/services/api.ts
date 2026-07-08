@@ -1,9 +1,10 @@
 import type { LastQuantity, Order, Product, Settings } from "../types/domain";
 
-const baseUrl = "/api";
+// All frontend calls go through the centralized root API module deployed at /api.
+const centralizedApiBaseUrl = "/api";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${baseUrl}${path}`, {
+  const response = await fetch(`${centralizedApiBaseUrl}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -44,8 +45,8 @@ export const api = {
     dashboard: () => request<{ totalProducts: number; lastOrder?: Order }>("/stats/dashboard"),
     orders: () => request<{ frequentProducts: Array<Record<string, number | string>>; ordersOverTime: Array<Record<string, number | string>> }>("/stats/orders")
   },
-  exportUrl: (orderId: number, format: "pdf" | "xlsx" | "csv") => `${baseUrl}/export/orders/${orderId}/${format}`,
-  databaseUrl: () => `${baseUrl}/export/database`,
+  exportUrl: (orderId: number, format: "pdf" | "xlsx" | "csv") => `${centralizedApiBaseUrl}/export/orders/${orderId}/${format}`,
+  databaseUrl: () => `${centralizedApiBaseUrl}/export/database`,
   importProducts: async (file: File) => upload("/import/products", file),
   restore: async (file: File) => upload("/import/restore", file),
   seedBeverages: () => request<{ totalSeedProducts: number; inserted: number; skipped: number }>("/import/beverage-catalog", { method: "POST" }),
@@ -55,7 +56,7 @@ export const api = {
 async function upload(path: string, file: File) {
   const form = new FormData();
   form.append("file", file);
-  const response = await fetch(`${baseUrl}${path}`, { method: "POST", body: form });
+  const response = await fetch(`${centralizedApiBaseUrl}${path}`, { method: "POST", body: form });
   if (!response.ok) throw new Error("Caricamento non riuscito");
   return response.json();
 }

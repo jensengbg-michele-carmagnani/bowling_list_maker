@@ -1,5 +1,5 @@
 import serverless from "serverless-http";
-import { createApp, registerErrorHandler } from "../backend/src/app.js";
+import { createApp, registerErrorHandler } from "./app.js";
 
 const app = createApp();
 registerErrorHandler(app);
