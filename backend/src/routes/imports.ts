@@ -1,21 +1,20 @@
-import fs from "node:fs";
 import multer from "multer";
 import { Router } from "express";
 import XLSX from "xlsx";
-import { paths } from "../db.js";
 import { createProduct } from "../services/productService.js";
+import { restoreDataSnapshot } from "../services/snapshotService.js";
 import { seedBeverageCatalog, seedKitchenCatalog } from "../services/seedService.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
-const upload = multer({ dest: paths.dataDir });
+const upload = multer({ storage: multer.memoryStorage() });
 export const importsRouter = Router();
 
 importsRouter.post(
   "/products",
   upload.single("file"),
-  asyncHandler((req, res) => {
+  asyncHandler(async (req, res) => {
     if (!req.file) return res.status(400).json({ message: "File mancante" });
-    const workbook = XLSX.readFile(req.file.path);
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
     const imported = [];
@@ -24,21 +23,19 @@ importsRouter.post(
       const name = String(row.Nome ?? row.name ?? "").trim();
       if (!name) continue;
       try {
-        imported.push(
-          createProduct({
+        const product = await createProduct({
             name,
             category: String(row.Categoria ?? row.category ?? "Altro"),
             unit: String(row.Unita ?? row.unit ?? row["Unità"] ?? "pezzi"),
             notes: String(row.Note ?? row.notes ?? ""),
             habitual: true
-          })
-        );
+          });
+        imported.push(product);
       } catch {
         // I duplicati vengono ignorati per rendere l'import rapido e ripetibile.
       }
     }
 
-    fs.unlink(req.file.path, () => undefined);
     return res.json({ imported: imported.length });
   })
 );
@@ -46,24 +43,23 @@ importsRouter.post(
 importsRouter.post(
   "/restore",
   upload.single("file"),
-  asyncHandler((req, res) => {
+  asyncHandler(async (req, res) => {
     if (!req.file) return res.status(400).json({ message: "File mancante" });
-    fs.copyFileSync(req.file.path, paths.dbPath);
-    fs.unlink(req.file.path, () => undefined);
-    return res.json({ restored: true });
+    const content = JSON.parse(req.file.buffer.toString("utf8"));
+    return res.json(await restoreDataSnapshot(content));
   })
 );
 
 importsRouter.post(
   "/beverage-catalog",
-  asyncHandler((_req, res) => {
-    res.json(seedBeverageCatalog());
+  asyncHandler(async (_req, res) => {
+    res.json(await seedBeverageCatalog());
   })
 );
 
 importsRouter.post(
   "/kitchen-catalog",
-  asyncHandler((_req, res) => {
-    res.json(seedKitchenCatalog());
+  asyncHandler(async (_req, res) => {
+    res.json(await seedKitchenCatalog());
   })
 );

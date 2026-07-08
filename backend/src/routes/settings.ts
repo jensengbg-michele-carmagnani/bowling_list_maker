@@ -4,5 +4,5 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 export const settingsRouter = Router();
 
-settingsRouter.get("/", asyncHandler((_req, res) => res.json(getSettings())));
-settingsRouter.put("/", asyncHandler((req, res) => res.json(updateSettings(req.body))));
+settingsRouter.get("/", asyncHandler(async (_req, res) => res.json(await getSettings())));
+settingsRouter.put("/", asyncHandler(async (req, res) => res.json(await updateSettings(req.body))));

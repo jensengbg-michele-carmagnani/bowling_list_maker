@@ -1,7 +1,5 @@
-import fs from "node:fs";
 import { Router } from "express";
-import { paths } from "../db.js";
-import { createCsv, createPdf, createXlsx } from "../services/exportService.js";
+import { createBackupJson, createCsv, createPdf, createXlsx } from "../services/exportService.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 export const exportsRouter = Router();
@@ -29,22 +27,27 @@ exportsRouter.get(
     }
 
     if (format === "pdf") {
-      const pdfPath = await createPdf(orderId);
-      if (!pdfPath) return res.status(404).json({ message: "Ordine non trovato" });
-      return res.download(pdfPath, `ordine-${orderId}.pdf`);
+      const pdf = await createPdf(orderId);
+      if (!pdf) return res.status(404).json({ message: "Ordine non trovato" });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename=ordine-${orderId}.pdf`);
+      return res.send(pdf);
     }
 
     return res.status(400).json({ message: "Formato non supportato" });
   })
 );
 
-exportsRouter.get("/database", (_req, res) => {
-  res.download(paths.dbPath, "warehouse-backup.sqlite");
-});
-
-exportsRouter.get("/database/json", (_req, res) => {
-  const file = fs.readFileSync(paths.dbPath);
-  res.setHeader("Content-Type", "application/octet-stream");
-  res.setHeader("Content-Disposition", "attachment; filename=warehouse-database.sqlite");
+exportsRouter.get("/database", asyncHandler(async (_req, res) => {
+  const file = await createBackupJson();
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Content-Disposition", "attachment; filename=warehouse-backup.json");
   res.send(file);
-});
+}));
+
+exportsRouter.get("/database/json", asyncHandler(async (_req, res) => {
+  const file = await createBackupJson();
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Content-Disposition", "attachment; filename=warehouse-backup.json");
+  res.send(file);
+}));

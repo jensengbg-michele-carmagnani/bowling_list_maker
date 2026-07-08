@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db } from "../db.js";
+import { assertNoError, defaultSettings, ensureDefaultSettings, parseSettingValue, supabase } from "../supabase.js";
 
 const settingsSchema = z.object({
   businessName: z.string().min(1).optional(),
@@ -9,28 +9,32 @@ const settingsSchema = z.object({
   units: z.array(z.string().min(1)).optional()
 });
 
-export function getSettings() {
-  const rows = db.prepare("SELECT key, value FROM settings").all() as Array<{ key: string; value: string }>;
-  return rows.reduce<Record<string, unknown>>((acc, row) => {
-    try {
-      acc[row.key] = JSON.parse(row.value);
-    } catch {
-      acc[row.key] = row.value;
-    }
+export async function getSettings() {
+  await ensureDefaultSettings();
+
+  const { data, error } = await supabase.from("settings").select("key, value");
+  assertNoError(error, "Lettura impostazioni");
+
+  const result = (data ?? []).reduce<Record<string, unknown>>((acc: Record<string, unknown>, row: { key: string; value: unknown }) => {
+    acc[row.key] = parseSettingValue(row.value);
     return acc;
-  }, {});
+  }, { ...defaultSettings });
+
+  return result;
 }
 
-export function updateSettings(input: unknown) {
+export async function updateSettings(input: unknown) {
   const settings = settingsSchema.parse(input);
-  const stmt = db.prepare(
-    `INSERT INTO settings (key, value) VALUES (@key, @value)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value`
-  );
 
-  Object.entries(settings).forEach(([key, value]) => {
-    stmt.run({ key, value: typeof value === "string" ? value : JSON.stringify(value) });
-  });
+  const entries = Object.entries(settings).map(([key, value]) => ({
+    key,
+    value: parseSettingValue(value)
+  }));
+
+  if (entries.length) {
+    const { error } = await supabase.from("settings").upsert(entries, { onConflict: "key" });
+    assertNoError(error, "Aggiornamento impostazioni");
+  }
 
   return getSettings();
 }

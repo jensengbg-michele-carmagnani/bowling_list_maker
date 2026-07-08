@@ -3,7 +3,7 @@
 Applicazione per la gestione degli ordini di magazzino, composta da:
 
 - `frontend`: React 19 + Vite + Tailwind + PWA
-- `backend`: Express + TypeScript + SQLite (`better-sqlite3`)
+- `backend`: Express + TypeScript + Supabase
 
 ## Sviluppo locale
 
@@ -11,6 +11,15 @@ Applicazione per la gestione degli ordini di magazzino, composta da:
 npm install
 npm run dev
 ```
+
+## Configurazione ambiente
+
+Crea un file `.env` a partire da `.env.example` e configura:
+
+- `FRONTEND_ORIGIN`: origine consentita dal CORS
+- `SUPABASE_URL`: URL del progetto Supabase
+- `SUPABASE_ANON_KEY`: chiave anonima del progetto
+- `SUPABASE_SERVICE_ROLE_KEY`: chiave server-side usata dal backend per CRUD, seed, backup e migrazione legacy
 
 ## Build produzione
 
@@ -23,16 +32,28 @@ npm run start
 
 Il repository include una configurazione `vercel.json` che pubblica:
 
-- il frontend statico da `frontend/dist`
+- il frontend statico da `dist`
 - le API Express come function Vercel tramite `api/[...path].js`
 
-Variabili ambiente supportate:
+## Schema Supabase
 
-- `FRONTEND_ORIGIN`: origine consentita dal CORS
-- `DB_PATH`: percorso del database SQLite
+- migrazione iniziale: `supabase/migrations/20260707173000_initial_schema.sql`
+- tabelle: `products`, `orders`, `order_items`, `settings`
+- RLS abilitato su tutte le tabelle
+- funzione SQL `reset_identity_sequences()` per riallineare le sequence dopo restore o migrazione legacy
 
-Note operative:
+## Migrazione dati legacy
 
-- in ambiente Vercel, se `DB_PATH` non e' impostato, il database viene creato in `/tmp/bowling-list-maker/warehouse.sqlite`
-- questa modalita' e' adatta a preview e staging tecnico, ma non garantisce persistenza dati tra invocazioni o deploy
-- per un uso produttivo stabile e' consigliato migrare il database verso uno storage esterno persistente
+Se esiste ancora il file locale `database/data/warehouse.sqlite`, puoi migrare i dati reali con:
+
+```bash
+npm run migrate:legacy-sqlite --workspace backend
+```
+
+Lo script legge SQLite tramite il binario di sistema `sqlite3`, carica prodotti, ordini, righe ordine e impostazioni su Supabase e riallinea le sequence.
+
+## Backup e restore
+
+- `GET /api/export/database`: esporta uno snapshot JSON completo di Supabase
+- `POST /api/import/restore`: ripristina uno snapshot JSON completo
+- l'interfaccia impostazioni usa ora backup/restore JSON e non piu file `.sqlite`

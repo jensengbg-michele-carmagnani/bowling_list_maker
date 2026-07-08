@@ -4,5 +4,5 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 export const statsRouter = Router();
 
-statsRouter.get("/dashboard", asyncHandler((_req, res) => res.json(dashboardStats())));
-statsRouter.get("/orders", asyncHandler((_req, res) => res.json(orderStats())));
+statsRouter.get("/dashboard", asyncHandler(async (_req, res) => res.json(await dashboardStats())));
+statsRouter.get("/orders", asyncHandler(async (_req, res) => res.json(await orderStats())));

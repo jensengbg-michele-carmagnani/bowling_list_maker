@@ -7,6 +7,7 @@ import { ordersRouter } from "./routes/orders.js";
 import { productsRouter } from "./routes/products.js";
 import { settingsRouter } from "./routes/settings.js";
 import { statsRouter } from "./routes/stats.js";
+import { ensureDefaultSettings } from "./supabase.js";
 
 export function createApp() {
   const app = express();
@@ -14,6 +15,9 @@ export function createApp() {
   app.use(helmet({ crossOriginResourcePolicy: false }));
   app.use(cors({ origin: process.env.FRONTEND_ORIGIN ?? true }));
   app.use(express.json({ limit: "8mb" }));
+  app.use("/api", (_req, _res, next) => {
+    ensureDefaultSettings().then(() => next()).catch(next);
+  });
 
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
   app.use("/api/products", productsRouter);

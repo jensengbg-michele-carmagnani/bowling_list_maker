@@ -22,7 +22,7 @@ export function SettingsPage({ settings, refresh, dark, setDark }: { settings: S
 
   async function restore(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-    if (file && window.confirm("Ripristinare il database sostituendo quello attuale?")) await api.restore(file);
+    if (file && window.confirm("Ripristinare i dati Supabase sostituendo quelli attuali?")) await api.restore(file);
     event.target.value = "";
   }
 
@@ -74,10 +74,10 @@ export function SettingsPage({ settings, refresh, dark, setDark }: { settings: S
           <Upload size={18} /> Importa prodotti Excel
           <input className="hidden" type="file" accept=".xlsx,.xls,.csv" onChange={uploadProducts} />
         </label>
-        <Button variant="ghost" icon={<Download size={18} />} onClick={() => window.open(api.databaseUrl(), "_blank")}>Backup database</Button>
+        <Button variant="ghost" icon={<Download size={18} />} onClick={() => window.open(api.databaseUrl(), "_blank")}>Backup dati</Button>
         <label className="tap-target flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800 sm:col-span-2">
-          <RotateCcw size={18} /> Ripristina database
-          <input className="hidden" type="file" accept=".sqlite,.db" onChange={restore} />
+          <RotateCcw size={18} /> Ripristina backup JSON
+          <input className="hidden" type="file" accept=".json" onChange={restore} />
         </label>
       </div>
     </section>

@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import { db, paths } from "../db.js";
+import { fileURLToPath } from "node:url";
+import { supabase, assertNoError } from "../supabase.js";
+import { getSettings, updateSettings } from "./settingsService.js";
 
 type SeedProduct = {
   name: string;
@@ -9,8 +11,11 @@ type SeedProduct = {
   notes?: string;
 };
 
-const beverageSeedPath = path.join(paths.databaseDir, "seeds", "beverage-products.json");
-const kitchenSeedPath = path.join(paths.databaseDir, "seeds", "kitchen-products.json");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, "../../..");
+const beverageSeedPath = path.join(rootDir, "database", "seeds", "beverage-products.json");
+const kitchenSeedPath = path.join(rootDir, "database", "seeds", "kitchen-products.json");
 
 export function seedBeverageCatalog() {
   return seedCatalog(beverageSeedPath, ["pezzi", "kg", "litri", "confezioni", "bottiglie"]);
@@ -20,22 +25,31 @@ export function seedKitchenCatalog() {
   return seedCatalog(kitchenSeedPath, ["pezzi", "kg", "litri", "confezioni", "bottiglie"]);
 }
 
-function seedCatalog(seedPath: string, units: string[]) {
+async function seedCatalog(seedPath: string, units: string[]) {
   const products = JSON.parse(fs.readFileSync(seedPath, "utf8")) as SeedProduct[];
-  const insert = db.prepare(
-    `INSERT OR IGNORE INTO products (name, category, unit, notes, habitual)
-     VALUES (@name, @category, @unit, @notes, 1)`
+  const beforeResult = await supabase.from("products").select("*", { count: "exact", head: true });
+  assertNoError(beforeResult.error, "Conteggio prodotti prima del seed");
+
+  const insertResult = await supabase.from("products").upsert(
+    products.map((product) => ({
+      name: product.name,
+      category: product.category,
+      unit: product.unit,
+      notes: product.notes ?? "Catalogo precaricato",
+      habitual: true
+    })),
+    { onConflict: "name", ignoreDuplicates: true }
   );
+  assertNoError(insertResult.error, "Seed catalogo prodotti");
 
-  const before = (db.prepare("SELECT COUNT(*) AS count FROM products").get() as { count: number }).count;
-  const transaction = db.transaction(() => {
-    products.forEach((product) => insert.run({ ...product, notes: product.notes ?? "Catalogo precaricato" }));
-    mergeSettingList("categories", Array.from(new Set(products.map((product) => product.category))));
-    mergeSettingList("units", units);
-  });
+  await mergeSettingList("categories", Array.from(new Set(products.map((product) => product.category))));
+  await mergeSettingList("units", units);
 
-  transaction();
-  const after = (db.prepare("SELECT COUNT(*) AS count FROM products").get() as { count: number }).count;
+  const afterResult = await supabase.from("products").select("*", { count: "exact", head: true });
+  assertNoError(afterResult.error, "Conteggio prodotti dopo il seed");
+
+  const before = beforeResult.count ?? 0;
+  const after = afterResult.count ?? 0;
 
   return {
     totalSeedProducts: products.length,
@@ -44,21 +58,13 @@ function seedCatalog(seedPath: string, units: string[]) {
   };
 }
 
-function mergeSettingList(key: string, values: string[]) {
-  const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as { value: string } | undefined;
-  const current = row ? safeParseArray(row.value) : [];
+async function mergeSettingList(key: "categories" | "units", values: string[]) {
+  const settings = await getSettings();
+  const current = safeParseArray(settings[key]);
   const next = Array.from(new Set([...current, ...values])).sort((a, b) => a.localeCompare(b, "it"));
-  db.prepare(
-    `INSERT INTO settings (key, value) VALUES (?, ?)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value`
-  ).run(key, JSON.stringify(next));
+  await updateSettings({ [key]: next });
 }
 
-function safeParseArray(value: string) {
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
+function safeParseArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }

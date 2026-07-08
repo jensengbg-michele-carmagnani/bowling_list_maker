@@ -6,22 +6,22 @@ export const productsRouter = Router();
 
 productsRouter.get(
   "/",
-  asyncHandler((req, res) => {
-    res.json(listProducts(req.query as { search?: string; category?: string; habitual?: string }));
+  asyncHandler(async (req, res) => {
+    res.json(await listProducts(req.query as { search?: string; category?: string; habitual?: string }));
   })
 );
 
 productsRouter.post(
   "/",
-  asyncHandler((req, res) => {
-    res.status(201).json(createProduct(req.body));
+  asyncHandler(async (req, res) => {
+    res.status(201).json(await createProduct(req.body));
   })
 );
 
 productsRouter.put(
   "/:id",
-  asyncHandler((req, res) => {
-    const product = updateProduct(Number(req.params.id), req.body);
+  asyncHandler(async (req, res) => {
+    const product = await updateProduct(Number(req.params.id), req.body);
     if (!product) return res.status(404).json({ message: "Prodotto non trovato" });
     return res.json(product);
   })
@@ -29,8 +29,8 @@ productsRouter.put(
 
 productsRouter.delete(
   "/:id",
-  asyncHandler((req, res) => {
-    if (!deleteProduct(Number(req.params.id))) return res.status(404).json({ message: "Prodotto non trovato" });
+  asyncHandler(async (req, res) => {
+    if (!(await deleteProduct(Number(req.params.id)))) return res.status(404).json({ message: "Prodotto non trovato" });
     return res.status(204).send();
   })
 );

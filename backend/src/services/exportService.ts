@@ -1,12 +1,10 @@
-import fs from "node:fs";
-import path from "node:path";
 import PDFDocument from "pdfkit";
 import XLSX from "xlsx";
-import { paths } from "../db.js";
 import { getOrder } from "./orderService.js";
+import { createDataSnapshot } from "./snapshotService.js";
 
-export function createCsv(orderId: number) {
-  const order = getOrder(orderId);
+export async function createCsv(orderId: number) {
+  const order = await getOrder(orderId);
   if (!order) return undefined;
   const header = ["Prodotto", "Categoria", "Quantita", "Unita", "Note"];
   const rows = (order.items as Array<Record<string, unknown>>).map((item) => [
@@ -19,8 +17,8 @@ export function createCsv(orderId: number) {
   return [header, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\n");
 }
 
-export function createXlsx(orderId: number) {
-  const order = getOrder(orderId);
+export async function createXlsx(orderId: number) {
+  const order = await getOrder(orderId);
   if (!order) return undefined;
   const rows = (order.items as Array<Record<string, unknown>>).map((item) => ({
     Prodotto: item.name,
@@ -34,43 +32,47 @@ export function createXlsx(orderId: number) {
   return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
 }
 
-export function createPdf(orderId: number) {
-  const order = getOrder(orderId);
+export async function createPdf(orderId: number) {
+  const order = await getOrder(orderId);
   if (!order) return undefined;
-  const filePath = path.join(paths.dataDir, `ordine-${orderId}.pdf`);
-  const doc = new PDFDocument({ margin: 44, size: "A4" });
-  const stream = fs.createWriteStream(filePath);
-  doc.pipe(stream);
 
-  doc.fontSize(20).text(order.name as string, { underline: true });
-  doc.moveDown(0.5).fontSize(10).text(`Creato: ${formatDate(order.created_at as string)}`);
-  doc.moveDown(1);
+  return new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 44, size: "A4" });
+    const chunks: Buffer[] = [];
 
-  doc.fontSize(11).text("Prodotto", 44, doc.y, { width: 190, continued: true });
-  doc.text("Categoria", { width: 110, continued: true });
-  doc.text("Qta", { width: 60, continued: true });
-  doc.text("Unita", { width: 80, continued: true });
-  doc.text("Note");
-  doc.moveTo(44, doc.y + 4).lineTo(550, doc.y + 4).stroke();
-  doc.moveDown();
+    doc.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+    doc.on("error", reject);
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
 
-  (order.items as Array<Record<string, unknown>>).forEach((item) => {
-    const y = doc.y;
-    if (y > 740) doc.addPage();
-    doc.fontSize(10).text(String(item.name), 44, doc.y, { width: 190, continued: true });
-    doc.text(String(item.category), { width: 110, continued: true });
-    doc.text(String(item.quantity), { width: 60, continued: true });
-    doc.text(String(item.unit), { width: 80, continued: true });
-    doc.text(String(item.notes ?? ""), { width: 120 });
-    doc.moveDown(0.35);
+    doc.fontSize(20).text(order.name as string, { underline: true });
+    doc.moveDown(0.5).fontSize(10).text(`Creato: ${formatDate(order.created_at as string)}`);
+    doc.moveDown(1);
+
+    doc.fontSize(11).text("Prodotto", 44, doc.y, { width: 190, continued: true });
+    doc.text("Categoria", { width: 110, continued: true });
+    doc.text("Qta", { width: 60, continued: true });
+    doc.text("Unita", { width: 80, continued: true });
+    doc.text("Note");
+    doc.moveTo(44, doc.y + 4).lineTo(550, doc.y + 4).stroke();
+    doc.moveDown();
+
+    (order.items as Array<Record<string, unknown>>).forEach((item) => {
+      if (doc.y > 740) doc.addPage();
+      doc.fontSize(10).text(String(item.name), 44, doc.y, { width: 190, continued: true });
+      doc.text(String(item.category), { width: 110, continued: true });
+      doc.text(String(item.quantity), { width: 60, continued: true });
+      doc.text(String(item.unit), { width: 80, continued: true });
+      doc.text(String(item.notes ?? ""), { width: 120 });
+      doc.moveDown(0.35);
+    });
+
+    doc.end();
   });
+}
 
-  doc.end();
-
-  return new Promise<string>((resolve, reject) => {
-    stream.on("finish", () => resolve(filePath));
-    stream.on("error", reject);
-  });
+export async function createBackupJson() {
+  const snapshot = await createDataSnapshot();
+  return Buffer.from(JSON.stringify(snapshot, null, 2), "utf8");
 }
 
 function escapeCsv(value: unknown) {

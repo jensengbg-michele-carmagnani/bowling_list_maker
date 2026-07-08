@@ -8,10 +8,11 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "seed:beverages": "tsx src/scripts/seedBeverages.ts",
-    "seed:kitchen": "tsx src/scripts/seedKitchen.ts"
+    "seed:kitchen": "tsx src/scripts/seedKitchen.ts",
+    "migrate:legacy-sqlite": "tsx src/scripts/migrateLegacySqliteToSupabase.ts"
   },
   "dependencies": {
-    "better-sqlite3": "^11.9.1",
+    "@supabase/supabase-js": "^2.57.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "helmet": "^8.0.0",
@@ -22,7 +23,6 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/multer": "^1.4.12",
