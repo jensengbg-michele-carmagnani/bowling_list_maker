@@ -106,18 +106,24 @@ export function OrderBuilder({ settings, editOrderId, clearEditOrder }: { settin
     setQuantities((current) => ({ ...current, [productId]: { ...(current[productId] ?? { quantity: 0 }), notes } }));
   }
 
-  async function share(format: "pdf" | "xlsx" | "csv") {
+  async function share(format: "pdf" | "xlsx" | "csv", targetWindow?: Window | null) {
     const items = Object.entries(quantities).map(([productId, item]) => ({ productId: Number(productId), ...item }));
     const saved = orderId ? await api.orders.update(orderId, { name, items }) : await api.orders.create({ name, items });
     setOrderId(saved.id);
-    window.open(api.exportUrl(saved.id, format), "_blank");
+    const exportUrl = typeof window === "undefined"
+      ? api.exportUrl(saved.id, format)
+      : new URL(api.exportUrl(saved.id, format), window.location.origin).toString();
+    if (targetWindow) targetWindow.location.href = exportUrl;
+    else window.location.assign(exportUrl);
   }
 
-  async function whatsapp() {
+  async function whatsapp(targetWindow?: Window | null) {
     const lines = (products ?? [])
       .filter((product) => (quantities[product.id]?.quantity ?? 0) > 0)
       .map((product) => `${product.name}: ${quantities[product.id].quantity} ${product.unit}`);
-    window.open(`https://wa.me/?text=${encodeURIComponent(`${name}\n${lines.join("\n")}`)}`, "_blank");
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${name}\n${lines.join("\n")}`)}`;
+    if (targetWindow) targetWindow.location.href = whatsappUrl;
+    else window.location.assign(whatsappUrl);
   }
 
   function openSummary(action: SummaryAction) {
@@ -125,10 +131,10 @@ export function OrderBuilder({ settings, editOrderId, clearEditOrder }: { settin
     setSummaryAction(action);
   }
 
-  async function confirmSummary() {
+  async function confirmSummary(targetWindow?: Window | null) {
     if (!summaryAction) return;
-    if (summaryAction === "whatsapp") await whatsapp();
-    else await share(summaryAction);
+    if (summaryAction === "whatsapp") await whatsapp(targetWindow);
+    else await share(summaryAction, targetWindow);
     setSummaryAction(null);
   }
 
@@ -367,7 +373,7 @@ function SummaryModal({
   totalQuantity: number;
   totalAmount: number;
   onClose: () => void;
-  onConfirm: () => void | Promise<void>;
+  onConfirm: (targetWindow?: Window | null) => void | Promise<void>;
 }) {
   const actionLabel = action === "pdf" ? "esporta in PDF" : action === "xlsx" ? "esporta in Excel" : action === "csv" ? "esporta in CSV" : "invia su WhatsApp";
 
@@ -426,7 +432,14 @@ function SummaryModal({
           </div>
           <div className="grid grid-cols-2 gap-2 md:flex">
             <Button variant="muted" onClick={onClose}>Torna ai prodotti</Button>
-            <Button onClick={() => void onConfirm()}>{action === "whatsapp" ? "Conferma e invia" : "Conferma e continua"}</Button>
+            <Button
+              onClick={() => {
+                const popup = typeof window === "undefined" ? null : window.open("", "_blank");
+                void onConfirm(popup);
+              }}
+            >
+              {action === "whatsapp" ? "Conferma e invia" : "Conferma e continua"}
+            </Button>
           </div>
         </div>
       </div>
