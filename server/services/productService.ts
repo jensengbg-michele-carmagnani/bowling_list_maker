@@ -7,6 +7,7 @@ export const productSchema = z.object({
   category: z.string().trim().min(1),
   unit: z.string().trim().min(1),
   notes: z.string().optional().default(""),
+  price: z.coerce.number().min(0).optional().default(0),
   habitual: z.union([z.boolean(), z.literal(0), z.literal(1)]).transform((value) => value === true || value === 1).optional().default(true)
 });
 
@@ -16,6 +17,7 @@ type ProductRow = {
   category: string;
   unit: string;
   notes: string;
+  price?: number;
   habitual: boolean;
   created_at: string;
   updated_at: string;
@@ -53,6 +55,7 @@ export async function createProduct(input: unknown) {
       category: product.category,
       unit: product.unit,
       notes: product.notes,
+      price: product.price,
       habitual: product.habitual
     })
     .select("*")
@@ -72,6 +75,7 @@ export async function updateProduct(id: number, input: unknown) {
     category: product.category ?? current.category,
     unit: product.unit ?? current.unit,
     notes: product.notes ?? current.notes,
+    price: product.price ?? current.price,
     habitual: product.habitual === undefined ? current.habitual === 1 : product.habitual
   };
 
@@ -99,6 +103,7 @@ export async function getProduct(id: number) {
 function mapProduct(row: ProductRow) {
   return {
     ...row,
+    price: Number(row.price ?? 0),
     icon: getProductIcon(row.id),
     habitual: toHabitualFlag(row.habitual)
   };

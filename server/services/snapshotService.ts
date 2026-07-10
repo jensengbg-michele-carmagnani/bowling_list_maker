@@ -10,6 +10,7 @@ const snapshotSchema = z.object({
     category: z.string(),
     unit: z.string(),
     notes: z.string().default(""),
+    price: z.number().default(0),
     habitual: z.union([z.boolean(), z.number()]),
     created_at: z.string(),
     updated_at: z.string()
@@ -58,6 +59,7 @@ export async function createDataSnapshot() {
       category: string;
       unit: string;
       notes: string;
+      price: number;
       habitual: boolean;
       created_at: string;
       updated_at: string;

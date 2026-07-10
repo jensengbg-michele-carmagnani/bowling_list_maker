@@ -172,6 +172,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
             category: String(row.Categoria ?? row.category ?? "Altro"),
             unit: String(row.Unita ?? row.unit ?? row["Unità"] ?? "pezzi"),
             notes: String(row.Note ?? row.notes ?? ""),
+            price: Number(row.Prezzo ?? row.prezzo ?? row.price ?? row["Prezzo unitario"] ?? 0) || 0,
             habitual: true
           });
           imported += 1;

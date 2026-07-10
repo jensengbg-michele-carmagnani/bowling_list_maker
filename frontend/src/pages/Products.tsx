@@ -6,6 +6,7 @@ import { SearchBar } from "../components/SearchBar";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../services/api";
 import type { Product, Settings } from "../types/domain";
+import { formatCurrency } from "../utils/format";
 
 type Draft = Partial<Product> & { name: string; category: string; unit: string };
 
@@ -14,7 +15,7 @@ export function Products({ settings }: { settings: Settings | null }) {
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Product | null>(null);
   const [selected, setSelected] = useState<number[]>([]);
-  const [draft, setDraft] = useState<Draft>({ name: "", category: settings?.categories[0] ?? "Altro", unit: settings?.units[0] ?? "pezzi" });
+  const [draft, setDraft] = useState<Draft>({ name: "", category: settings?.categories[0] ?? "Altro", unit: settings?.units[0] ?? "pezzi", price: 0 });
 
   const filtered = useMemo(
     () => (products ?? []).filter((product) => product.name.toLowerCase().includes(query.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name)),
@@ -26,7 +27,7 @@ export function Products({ settings }: { settings: Settings | null }) {
     if (editing) await api.products.update(editing.id, draft);
     else await api.products.create(draft);
     setEditing(null);
-    setDraft({ name: "", category: settings?.categories[0] ?? "Altro", unit: settings?.units[0] ?? "pezzi", notes: "" });
+    setDraft({ name: "", category: settings?.categories[0] ?? "Altro", unit: settings?.units[0] ?? "pezzi", notes: "", price: 0 });
     refresh();
   }
 
@@ -55,7 +56,7 @@ export function Products({ settings }: { settings: Settings | null }) {
       )}
       <SearchBar value={query} onChange={setQuery} placeholder="Cerca prodotto" />
 
-      <form onSubmit={save} className="grid gap-2 rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800 sm:grid-cols-5">
+      <form onSubmit={save} className="grid gap-2 rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800 sm:grid-cols-6">
         <input className="h-12 rounded-lg bg-slate-100 px-3 dark:bg-slate-800 sm:col-span-2" placeholder="Nome" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} required />
         <select className="h-12 rounded-lg bg-slate-100 px-3 dark:bg-slate-800" value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>
           {(settings?.categories ?? ["Altro"]).map((category) => <option key={category}>{category}</option>)}
@@ -63,8 +64,18 @@ export function Products({ settings }: { settings: Settings | null }) {
         <select className="h-12 rounded-lg bg-slate-100 px-3 dark:bg-slate-800" value={draft.unit} onChange={(e) => setDraft({ ...draft, unit: e.target.value })}>
           {(settings?.units ?? ["pezzi"]).map((unit) => <option key={unit}>{unit}</option>)}
         </select>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          inputMode="decimal"
+          className="h-12 rounded-lg bg-slate-100 px-3 dark:bg-slate-800"
+          placeholder="Prezzo EUR"
+          value={draft.price ?? 0}
+          onChange={(e) => setDraft({ ...draft, price: Number(e.target.value) || 0 })}
+        />
         <Button icon={<Plus size={18} />}>{editing ? "Aggiorna" : "Aggiungi"}</Button>
-        <textarea className="min-h-20 rounded-lg bg-slate-100 p-3 dark:bg-slate-800 sm:col-span-5" placeholder="Note opzionali" value={draft.notes ?? ""} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
+        <textarea className="min-h-20 rounded-lg bg-slate-100 p-3 dark:bg-slate-800 sm:col-span-6" placeholder="Note opzionali" value={draft.notes ?? ""} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
       </form>
 
       <div className="space-y-2">
@@ -90,6 +101,7 @@ export function Products({ settings }: { settings: Settings | null }) {
             <div className="min-w-0 flex-1">
               <h3 className="truncate text-base font-black">{product.name}</h3>
               <p className="text-sm text-slate-500">{product.category} · {product.unit}</p>
+              <p className="text-sm font-semibold text-leaf">{formatCurrency(product.price)}</p>
             </div>
             <Button variant="muted" icon={<Edit3 size={18} />} onClick={() => startEdit(product)} aria-label="Modifica" />
             <Button variant="danger" icon={<Trash2 size={18} />} onClick={() => remove(product)} aria-label="Elimina" />

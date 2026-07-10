@@ -231,8 +231,30 @@ export async function productLastQuantities() {
 }
 
 async function replaceItems(orderId: number, items: Array<z.infer<typeof orderItemSchema>>) {
-  const normalized = items.filter((item) => item.quantity > 0);
-  const productIds = Array.from(new Set(normalized.map((item) => item.productId)));
+  const normalizedMap = new Map<number, z.infer<typeof orderItemSchema>>();
+
+  for (const item of items) {
+    if (item.quantity <= 0) continue;
+
+    const existing = normalizedMap.get(item.productId);
+    if (!existing) {
+      normalizedMap.set(item.productId, {
+        productId: item.productId,
+        quantity: item.quantity,
+        notes: item.notes ?? ""
+      });
+      continue;
+    }
+
+    normalizedMap.set(item.productId, {
+      productId: item.productId,
+      quantity: Number((existing.quantity + item.quantity).toFixed(2)),
+      notes: item.notes?.trim() ? item.notes : existing.notes
+    });
+  }
+
+  const normalized = Array.from(normalizedMap.values());
+  const productIds = Array.from(normalizedMap.keys());
 
   if (productIds.length) {
     const productsResult = await supabase.from("products").select("id").in("id", productIds);

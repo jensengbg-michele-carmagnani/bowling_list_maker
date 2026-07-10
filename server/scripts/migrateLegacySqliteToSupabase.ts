@@ -9,6 +9,7 @@ type LegacyProduct = {
   category: string;
   unit: string;
   notes: string;
+  price?: number;
   habitual: number;
   created_at: string;
   updated_at: string;
@@ -56,6 +57,7 @@ if (products.length) {
       await supabase.from("products").insert(
         products.map((product) => ({
           ...product,
+          price: product.price ?? 0,
           habitual: product.habitual === 1
         }))
       )

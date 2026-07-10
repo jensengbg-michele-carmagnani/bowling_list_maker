@@ -4,6 +4,7 @@ export type Product = {
   category: string;
   unit: string;
   notes: string;
+  price: number;
   icon: string;
   habitual: 0 | 1;
   created_at: string;

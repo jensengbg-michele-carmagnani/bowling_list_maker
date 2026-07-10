@@ -1,4 +1,4 @@
-import { FileDown, Minus, Plus, Send, Star } from "lucide-react";
+import { FileDown, Minus, Plus, Send, ShoppingBag, Star, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "../components/Button";
 import { ProductIcon } from "../components/ProductIcon";
@@ -7,9 +7,10 @@ import { useAsync } from "../hooks/useAsync";
 import { useDebouncedEffect } from "../hooks/useDebouncedEffect";
 import { api } from "../services/api";
 import type { LastQuantity, Product, Settings } from "../types/domain";
-import { formatDate, orderName } from "../utils/format";
+import { formatCurrency, formatDate, orderName } from "../utils/format";
 
 type QuantityMap = Record<number, { quantity: number; notes: string }>;
+type SummaryAction = "pdf" | "xlsx" | "csv" | "whatsapp";
 
 export function OrderBuilder({ settings, editOrderId, clearEditOrder }: { settings: Settings | null; editOrderId?: number | null; clearEditOrder?: () => void }) {
   const { data: products, error: productsError } = useAsync(() => api.products.list(), []);
@@ -22,6 +23,7 @@ export function OrderBuilder({ settings, editOrderId, clearEditOrder }: { settin
   const [habitualOnly, setHabitualOnly] = useState(false);
   const [quantities, setQuantities] = useState<QuantityMap>({});
   const [openProduct, setOpenProduct] = useState<Product | null>(null);
+  const [summaryAction, setSummaryAction] = useState<SummaryAction | null>(null);
   const lastByProduct = useMemo(() => new Map((lastQuantities ?? []).map((item) => [item.product_id, item])), [lastQuantities]);
 
   useEffect(() => {
@@ -47,6 +49,35 @@ export function OrderBuilder({ settings, editOrderId, clearEditOrder }: { settin
       return textMatch && categoryMatch && habitMatch;
     });
   }, [products, query, category, habitualOnly]);
+
+  const selectedItems = useMemo(() => {
+    return (products ?? [])
+      .map((product) => {
+        const current = quantities[product.id];
+        const quantity = current?.quantity ?? 0;
+        if (quantity <= 0) return null;
+
+        return {
+          ...product,
+          quantity,
+          notes: current?.notes ?? "",
+          lineTotal: Number((quantity * product.price).toFixed(2))
+        };
+      })
+      .filter((item): item is Product & { quantity: number; notes: string; lineTotal: number } => !!item)
+      .sort((a, b) => a.name.localeCompare(b.name, "it"));
+  }, [products, quantities]);
+
+  const summary = useMemo(() => {
+    return selectedItems.reduce(
+      (acc, item) => ({
+        itemCount: acc.itemCount + 1,
+        totalQuantity: Number((acc.totalQuantity + item.quantity).toFixed(2)),
+        totalAmount: Number((acc.totalAmount + item.lineTotal).toFixed(2))
+      }),
+      { itemCount: 0, totalQuantity: 0, totalAmount: 0 }
+    );
+  }, [selectedItems]);
 
   useDebouncedEffect(() => {
     const items = Object.entries(quantities).map(([productId, item]) => ({ productId: Number(productId), ...item }));
@@ -89,6 +120,18 @@ export function OrderBuilder({ settings, editOrderId, clearEditOrder }: { settin
     window.open(`https://wa.me/?text=${encodeURIComponent(`${name}\n${lines.join("\n")}`)}`, "_blank");
   }
 
+  function openSummary(action: SummaryAction) {
+    if (!selectedItems.length) return;
+    setSummaryAction(action);
+  }
+
+  async function confirmSummary() {
+    if (!summaryAction) return;
+    if (summaryAction === "whatsapp") await whatsapp();
+    else await share(summaryAction);
+    setSummaryAction(null);
+  }
+
   return (
     <section className="space-y-4">
       {(productsError || previousError || lastQuantitiesError) && (
@@ -101,16 +144,35 @@ export function OrderBuilder({ settings, editOrderId, clearEditOrder }: { settin
           <p className="text-sm font-semibold text-leaf">Nuova lista</p>
           <input className="w-full bg-transparent text-2xl font-black outline-none" value={name} onChange={(event) => setName(event.target.value)} />
         </div>
-        <Button icon={<Send size={18} />} onClick={() => share(settings?.preferredExport ?? "pdf")}>Condividi</Button>
+        <Button icon={<Send size={18} />} onClick={() => openSummary(settings?.preferredExport ?? "pdf")} disabled={!selectedItems.length}>
+          Riepilogo
+        </Button>
       </header>
 
       {!!previous?.length && (
-        <div className="rounded-lg bg-amber-50 p-3 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:ring-amber-900">
-          <p className="font-black text-amber-900 dark:text-amber-100">La settimana scorsa hai ordinato:</p>
-          <div className="mt-2 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm ring-1 ring-amber-200 dark:from-amber-950/50 dark:to-slate-900 dark:ring-amber-900">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Ordine precedente</p>
+              <p className="text-lg font-black text-amber-950 dark:text-amber-50">La settimana scorsa hai ordinato questi prodotti</p>
+            </div>
+            <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900 dark:bg-amber-900/60 dark:text-amber-50">
+              Tocca per riusare
+            </div>
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {previous.slice(0, 12).map((item) => (
-              <button key={item.product_id} onClick={() => setQuantity(item.product_id, item.quantity)} className="tap-target shrink-0 rounded-lg bg-white px-3 text-sm font-bold text-amber-950 ring-1 ring-amber-200 dark:bg-slate-900 dark:text-amber-100">
-                {item.name} · usa {item.quantity}
+              <button
+                key={item.product_id}
+                onClick={() => setQuantity(item.product_id, item.quantity)}
+                className="tap-target flex min-h-24 items-center gap-3 rounded-xl bg-white px-4 py-3 text-left shadow-sm ring-1 ring-amber-200 transition hover:ring-amber-300 dark:bg-slate-900 dark:ring-amber-900"
+              >
+                <ProductIcon src={item.icon} name={item.name} className="h-14 w-14 rounded-2xl bg-amber-100 dark:bg-amber-950" imgClassName="h-9 w-9" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-black text-slate-900 dark:text-white">{item.name}</p>
+                  <p className="truncate text-sm font-medium text-slate-500">{item.category} · {item.unit}</p>
+                  <p className="mt-1 text-sm font-bold text-amber-700 dark:text-amber-300">Ultima quantita: {item.quantity}</p>
+                </div>
               </button>
             ))}
           </div>
@@ -130,6 +192,7 @@ export function OrderBuilder({ settings, editOrderId, clearEditOrder }: { settin
             key={product.id}
             product={product}
             value={quantities[product.id]?.quantity ?? 0}
+            lineTotal={Number(((quantities[product.id]?.quantity ?? 0) * product.price).toFixed(2))}
             onMinus={() => change(product.id, -1)}
             onPlus={() => change(product.id, 1)}
             onOpen={() => setOpenProduct(product)}
@@ -137,11 +200,53 @@ export function OrderBuilder({ settings, editOrderId, clearEditOrder }: { settin
         ))}
       </div>
 
+      <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-leaf">Selezione corrente</p>
+            <h2 className="text-xl font-black">Riepilogo rapido ordine</h2>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Totale ordine</p>
+            <p className="text-2xl font-black text-leaf">{formatCurrency(summary.totalAmount)}</p>
+          </div>
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <SummaryStat label="Prodotti selezionati" value={String(summary.itemCount)} />
+          <SummaryStat label="Quantita totale" value={String(summary.totalQuantity)} />
+          <SummaryStat label="Media per riga" value={summary.itemCount ? formatCurrency(summary.totalAmount / summary.itemCount) : formatCurrency(0)} />
+        </div>
+        {!selectedItems.length ? (
+          <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-400">
+            Nessun prodotto selezionato. Aggiungi le quantita per vedere il riepilogo prima della conferma.
+          </div>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {selectedItems.map((item) => (
+              <div key={item.id} className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200 dark:bg-slate-950/40 dark:ring-slate-800">
+                <ProductIcon src={item.icon} name={item.name} className="h-12 w-12" imgClassName="h-8 w-8" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-black">{item.name}</p>
+                  <p className="truncate text-sm text-slate-500">
+                    {item.quantity} {item.unit} · {formatCurrency(item.price)} cad.
+                  </p>
+                  {!!item.notes && <p className="truncate text-xs font-medium text-slate-400">Nota: {item.notes}</p>}
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Totale riga</p>
+                  <p className="text-lg font-black text-slate-900 dark:text-white">{formatCurrency(item.lineTotal)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       <div className="sticky bottom-20 z-20 grid grid-cols-4 gap-2 rounded-lg bg-white p-2 shadow-soft ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800 lg:bottom-4">
-        <Button variant="muted" icon={<FileDown size={18} />} onClick={() => share("pdf")}>PDF</Button>
-        <Button variant="muted" onClick={() => share("xlsx")}>Excel</Button>
-        <Button variant="muted" onClick={() => share("csv")}>CSV</Button>
-        <Button onClick={whatsapp}>WhatsApp</Button>
+        <Button variant="muted" icon={<FileDown size={18} />} onClick={() => openSummary("pdf")} disabled={!selectedItems.length}>PDF</Button>
+        <Button variant="muted" onClick={() => openSummary("xlsx")} disabled={!selectedItems.length}>Excel</Button>
+        <Button variant="muted" onClick={() => openSummary("csv")} disabled={!selectedItems.length}>CSV</Button>
+        <Button onClick={() => openSummary("whatsapp")} disabled={!selectedItems.length}>WhatsApp</Button>
       </div>
 
       {openProduct && (
@@ -157,21 +262,60 @@ export function OrderBuilder({ settings, editOrderId, clearEditOrder }: { settin
           onClose={() => setOpenProduct(null)}
         />
       )}
+
+      {summaryAction && (
+        <SummaryModal
+          orderName={name}
+          action={summaryAction}
+          items={selectedItems}
+          totalQuantity={summary.totalQuantity}
+          totalAmount={summary.totalAmount}
+          onClose={() => setSummaryAction(null)}
+          onConfirm={confirmSummary}
+        />
+      )}
     </section>
   );
 }
 
-function ProductRow({ product, value, onMinus, onPlus, onOpen }: { product: Product; value: number; onMinus: () => void; onPlus: () => void; onOpen: () => void }) {
+function ProductRow({
+  product,
+  value,
+  lineTotal,
+  onMinus,
+  onPlus,
+  onOpen
+}: {
+  product: Product;
+  value: number;
+  lineTotal: number;
+  onMinus: () => void;
+  onPlus: () => void;
+  onOpen: () => void;
+}) {
   return (
-    <article onClick={onOpen} className="grid grid-cols-[44px_1fr_44px_58px_44px] items-center gap-2 rounded-lg bg-white p-2 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-      <ProductIcon src={product.icon} name={product.name} />
+    <article
+      onClick={onOpen}
+      className={`grid grid-cols-[52px_1fr_auto] items-center gap-3 rounded-2xl p-3 ring-1 transition ${
+        value > 0
+          ? "bg-teal-50 ring-teal-200 dark:bg-teal-950/30 dark:ring-teal-900"
+          : "bg-white ring-slate-200 dark:bg-slate-900 dark:ring-slate-800"
+      }`}
+    >
+      <ProductIcon src={product.icon} name={product.name} className="h-12 w-12" imgClassName="h-8 w-8" />
       <div className="min-w-0">
         <h3 className="truncate text-base font-black">{product.name}</h3>
-        <p className="truncate text-xs font-semibold text-slate-500">{product.category} · {product.unit}</p>
+        <p className="truncate text-sm font-semibold text-slate-500">{product.category} · {product.unit}</p>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-bold">
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-200">{formatCurrency(product.price)} cad.</span>
+          {value > 0 && <span className="rounded-full bg-teal-100 px-2 py-1 text-teal-800 dark:bg-teal-900/70 dark:text-teal-100">Riga: {formatCurrency(lineTotal)}</span>}
+        </div>
       </div>
-      <Button variant="muted" icon={<Minus size={18} />} onClick={(e) => { e.stopPropagation(); onMinus(); }} aria-label="Diminuisci" />
-      <span className="text-center text-xl font-black tabular-nums">{value}</span>
-      <Button icon={<Plus size={18} />} onClick={(e) => { e.stopPropagation(); onPlus(); }} aria-label="Aumenta" />
+      <div className="flex items-center gap-2">
+        <Button variant="muted" icon={<Minus size={18} />} onClick={(e) => { e.stopPropagation(); onMinus(); }} aria-label="Diminuisci" />
+        <span className="min-w-14 text-center text-xl font-black tabular-nums">{value}</span>
+        <Button icon={<Plus size={18} />} onClick={(e) => { e.stopPropagation(); onPlus(); }} aria-label="Aumenta" />
+      </div>
     </article>
   );
 }
@@ -186,12 +330,104 @@ function ProductSheet({ product, last, note, onNote, onUseLast, onClose }: { pro
             <h2 className="text-xl font-black">{product.name}</h2>
             <p className="text-sm text-slate-500">{product.category} · {product.unit}</p>
             <p className="text-sm text-slate-500">Ultima quantità: {last?.last_quantity ?? "-"} · {formatDate(last?.last_order_date)}</p>
+            <p className="mt-1 text-sm font-bold text-leaf">Prezzo unitario: {formatCurrency(product.price)}</p>
           </div>
         </div>
         <textarea className="mt-3 min-h-28 w-full rounded-lg bg-slate-100 p-3 dark:bg-slate-800" placeholder="Note per questo ordine" value={note} onChange={(event) => onNote(event.target.value)} />
         <div className="mt-3 grid grid-cols-2 gap-2">
           <Button variant="muted" onClick={onClose}>Chiudi</Button>
           <Button onClick={onUseLast}>Usa ultima quantità</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SummaryStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200 dark:bg-slate-950/40 dark:ring-slate-800">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{value}</p>
+    </div>
+  );
+}
+
+function SummaryModal({
+  orderName,
+  action,
+  items,
+  totalQuantity,
+  totalAmount,
+  onClose,
+  onConfirm
+}: {
+  orderName: string;
+  action: SummaryAction;
+  items: Array<Product & { quantity: number; notes: string; lineTotal: number }>;
+  totalQuantity: number;
+  totalAmount: number;
+  onClose: () => void;
+  onConfirm: () => void | Promise<void>;
+}) {
+  const actionLabel = action === "pdf" ? "esporta in PDF" : action === "xlsx" ? "esporta in Excel" : action === "csv" ? "esporta in CSV" : "invia su WhatsApp";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-slate-950/55 p-3 md:items-center md:justify-center" onClick={onClose}>
+      <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-soft dark:bg-slate-900" onClick={(event) => event.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+          <div>
+            <p className="text-sm font-semibold text-leaf">Riepilogo ordine</p>
+            <h2 className="text-2xl font-black">{orderName}</h2>
+            <p className="text-sm text-slate-500">Controlla i prodotti selezionati prima di confermare e {actionLabel}.</p>
+          </div>
+          <button onClick={onClose} className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white" aria-label="Chiudi riepilogo">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="grid gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800 sm:grid-cols-3">
+          <SummaryStat label="Prodotti" value={String(items.length)} />
+          <SummaryStat label="Quantita totale" value={String(totalQuantity)} />
+          <SummaryStat label="Totale complessivo" value={formatCurrency(totalAmount)} />
+        </div>
+
+        <div className="max-h-[48vh] overflow-y-auto px-5 py-4">
+          <div className="hidden grid-cols-[minmax(0,1.7fr)_110px_140px_150px] gap-3 rounded-xl bg-slate-100 px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-300 md:grid">
+            <span>Prodotto</span>
+            <span className="text-right">Quantita</span>
+            <span className="text-right">Prezzo unitario</span>
+            <span className="text-right">Totale</span>
+          </div>
+          <div className="mt-3 space-y-3">
+            {items.map((item) => (
+              <div key={item.id} className="rounded-2xl bg-slate-50 px-4 py-4 ring-1 ring-slate-200 dark:bg-slate-950/40 dark:ring-slate-800">
+                <div className="grid gap-3 md:grid-cols-[minmax(0,1.7fr)_110px_140px_150px] md:items-center">
+                  <div className="flex items-center gap-3">
+                    <ProductIcon src={item.icon} name={item.name} className="h-12 w-12" imgClassName="h-8 w-8" />
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-black">{item.name}</p>
+                      <p className="truncate text-sm text-slate-500">{item.category} · {item.unit}</p>
+                      {!!item.notes && <p className="mt-1 text-xs font-medium text-slate-400">Nota: {item.notes}</p>}
+                    </div>
+                  </div>
+                  <div className="text-sm font-bold md:text-right">{item.quantity}</div>
+                  <div className="text-sm font-bold md:text-right">{formatCurrency(item.price)}</div>
+                  <div className="text-base font-black text-leaf md:text-right">{formatCurrency(item.lineTotal)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 dark:border-slate-800 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <ShoppingBag size={16} />
+            <span>Totale ordine confermato: {formatCurrency(totalAmount)}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 md:flex">
+            <Button variant="muted" onClick={onClose}>Torna ai prodotti</Button>
+            <Button onClick={() => void onConfirm()}>{action === "whatsapp" ? "Conferma e invia" : "Conferma e continua"}</Button>
+          </div>
         </div>
       </div>
     </div>

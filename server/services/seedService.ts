@@ -9,6 +9,7 @@ type SeedProduct = {
   category: string;
   unit: string;
   notes?: string;
+  price?: number;
 };
 
 const __filename = fileURLToPath(import.meta.url);
@@ -36,6 +37,7 @@ async function seedCatalog(seedPath: string, units: string[]) {
       category: product.category,
       unit: product.unit,
       notes: product.notes ?? "Catalogo precaricato",
+      price: product.price ?? 0,
       habitual: true
     })),
     { onConflict: "name", ignoreDuplicates: true }
