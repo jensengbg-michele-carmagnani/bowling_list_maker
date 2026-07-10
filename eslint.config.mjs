@@ -6,9 +6,6 @@ const config = [
     ignores: [
       "dist/**",
       "frontend/dist/**",
-      "frontend/eslint.config.js",
-      "frontend/postcss.config.js",
-      "frontend/tailwind.config.js",
       "server/dist/**",
       ".next/**",
       "node_modules/**",

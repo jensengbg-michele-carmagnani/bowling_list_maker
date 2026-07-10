@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Layout, type Page } from "./components/Layout";
 import { Dashboard } from "./pages/Dashboard";
 import { History } from "./pages/History";
@@ -9,16 +9,40 @@ import { StatsPage } from "./pages/StatsPage";
 import { useAsync } from "./hooks/useAsync";
 import { api } from "./services/api";
 
+const themeChangeEvent = "theme-change";
+
+function subscribeTheme(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+
+  const handler = () => callback();
+  window.addEventListener(themeChangeEvent, handler);
+  window.addEventListener("storage", handler);
+
+  return () => {
+    window.removeEventListener(themeChangeEvent, handler);
+    window.removeEventListener("storage", handler);
+  };
+}
+
+function getThemeSnapshot() {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem("theme") === "dark";
+}
+
 export function App() {
   const [page, setPage] = useState<Page>("dashboard");
-  const [dark, setDark] = useState(() => typeof window !== "undefined" && window.localStorage.getItem("theme") === "dark");
   const [editOrderId, setEditOrderId] = useState<number | null>(null);
   const settings = useAsync(api.settings.get, []);
+  const dark = useSyncExternalStore(subscribeTheme, getThemeSnapshot, () => false);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
-    window.localStorage.setItem("theme", dark ? "dark" : "light");
   }, [dark]);
+
+  function setDark(value: boolean) {
+    window.localStorage.setItem("theme", value ? "dark" : "light");
+    window.dispatchEvent(new Event(themeChangeEvent));
+  }
 
   function editOrder(orderId: number) {
     setEditOrderId(orderId);

@@ -5,7 +5,7 @@ Applicazione per la gestione degli ordini di magazzino riallineata alla struttur
 - `app/`: root Next.js App Router
 - `app/api/`: API esposte da Next
 - `server/`: servizi condivisi e integrazione Supabase
-- `frontend/src/`: UI esistente riusata temporaneamente dalla root Next
+- `frontend/src/`: sorgenti UI riusati dalla root Next, senza piu la vecchia build Vite
 
 ## Sviluppo locale
 
@@ -37,9 +37,21 @@ npm run start
 - `app/api/[...path]/route.ts`: route handler Next per tutti gli endpoint `/api/...`
 - `server/services/`: logica business e accesso a Supabase
 - `server/scripts/`: seed cataloghi e migrazione da SQLite legacy
+- `public/`: asset statici Next, incluse le icone prodotto generate
+- `database/seeds/`: sorgenti dati per seed e cataloghi iniziali
 - `supabase/migrations/20260707173000_initial_schema.sql`: schema iniziale
 
 Il frontend continua a usare il base path `/api`, quindi non sono richieste modifiche lato UI per il passaggio a Next/Vercel.
+
+## Cartelle Non Necessarie
+
+Nella struttura attuale non servono piu:
+
+- `frontend/dist`
+- `dist`
+- `backend/dist`
+
+L'unico output di build di Next.js e `.next/`, generato automaticamente e non versionato.
 
 ## Script utili
 

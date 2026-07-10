@@ -41,11 +41,7 @@
   ],
   "exclude": [
     "node_modules",
-    "frontend/src/main.tsx",
-    "frontend/src/vite-env.d.ts",
     "server/routes/**",
-    "server/app.ts",
-    "server/server.ts",
     "server/utils/**"
   ]
 }
