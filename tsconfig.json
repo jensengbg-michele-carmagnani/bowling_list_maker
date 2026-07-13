@@ -35,7 +35,9 @@
     "app/**/*.tsx",
     "frontend/src/**/*.ts",
     "frontend/src/**/*.tsx",
+    "shared/**/*.ts",
     "server/**/*.ts",
+    "tests/**/*.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],

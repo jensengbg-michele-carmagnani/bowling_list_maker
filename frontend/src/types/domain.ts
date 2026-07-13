@@ -27,9 +27,11 @@ export type OrderItem = {
 export type Order = {
   id: number;
   name: string;
+  company_name: string;
   created_at: string;
   updated_at: string;
-  status: "draft" | "sent";
+  last_accessed_at: string;
+  status: "draft" | "sent" | "received";
   items: OrderItem[];
   preview_items?: OrderItem[];
   item_count?: number;

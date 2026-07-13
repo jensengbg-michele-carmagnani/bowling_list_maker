@@ -18,8 +18,10 @@ type LegacyProduct = {
 type LegacyOrder = {
   id: number;
   name: string;
+  company_name?: string;
   created_at: string;
   updated_at: string;
+  last_accessed_at?: string;
   status: string;
 };
 
@@ -67,7 +69,12 @@ if (products.length) {
 }
 
 if (orders.length) {
-  assertNoError((await supabase.from("orders").insert(orders)).error, "Migrazione ordini legacy");
+  assertNoError((await supabase.from("orders").insert(orders.map((order) => ({
+    ...order,
+    company_name: order.company_name ?? order.name,
+    last_accessed_at: order.last_accessed_at ?? order.updated_at ?? order.created_at,
+    status: order.status === "sent" || order.status === "received" ? order.status : "draft"
+  })))).error, "Migrazione ordini legacy");
 }
 
 if (settings.length) {

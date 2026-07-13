@@ -29,11 +29,12 @@ export const api = {
   orders: {
     list: () => request<Order[]>("/orders"),
     get: (id: number) => request<Order>(`/orders/${id}`),
-    create: (order: { name: string; items: Array<{ productId: number; quantity: number; notes?: string }> }) =>
+    create: (order: { companyName: string; name?: string; status?: Order["status"]; items: Array<{ productId: number; quantity: number; notes?: string }> }) =>
       request<Order>("/orders", { method: "POST", body: JSON.stringify(order) }),
-    update: (id: number, order: { name?: string; items?: Array<{ productId: number; quantity: number; notes?: string }> }) =>
+    update: (id: number, order: { companyName?: string; name?: string; status?: Order["status"]; items?: Array<{ productId: number; quantity: number; notes?: string }> }) =>
       request<Order>(`/orders/${id}`, { method: "PUT", body: JSON.stringify(order) }),
     duplicate: (id: number) => request<Order>(`/orders/${id}/duplicate`, { method: "POST" }),
+    remove: (id: number) => request<void>(`/orders/${id}`, { method: "DELETE" }),
     previous: () => request<Array<{ product_id: number; quantity: number; name: string; category: string; unit: string; icon?: string }>>("/orders/previous"),
     lastQuantities: () => request<LastQuantity[]>("/orders/last-quantities")
   },

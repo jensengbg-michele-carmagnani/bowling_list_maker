@@ -18,8 +18,10 @@ const snapshotSchema = z.object({
   orders: z.array(z.object({
     id: z.number().int().nonnegative(),
     name: z.string(),
+    company_name: z.string().default("Azienda non specificata"),
     created_at: z.string(),
     updated_at: z.string(),
+    last_accessed_at: z.string().default(""),
     status: z.string()
   })),
   order_items: z.array(z.object({

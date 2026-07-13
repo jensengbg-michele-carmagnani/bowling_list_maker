@@ -8,6 +8,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
+    "test": "tsx --test tests/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "generate:product-icons": "node --env-file=.env --import tsx server/scripts/generateProductIcons.ts",
     "seed:beverages": "tsx server/scripts/seedBeverages.ts",

@@ -6,6 +6,12 @@ import { createDataSnapshot } from "./snapshotService";
 export async function createCsv(orderId: number) {
   const order = await getOrder(orderId);
   if (!order) return undefined;
+  const metadataRows = [
+    ["Lista", order.name],
+    ["Azienda destinataria", order.company_name],
+    ["Stato", order.status],
+    ["Creato", formatDate(order.created_at as string)]
+  ];
   const header = ["Prodotto", "Categoria", "Quantita", "Unita", "Note"];
   const rows = (order.items as Array<Record<string, unknown>>).map((item) => [
     item.name,
@@ -14,12 +20,18 @@ export async function createCsv(orderId: number) {
     item.unit,
     item.notes ?? ""
   ]);
-  return [header, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\n");
+  return [...metadataRows, [], header, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\n");
 }
 
 export async function createXlsx(orderId: number) {
   const order = await getOrder(orderId);
   if (!order) return undefined;
+  const metaRows = [
+    { Campo: "Lista", Valore: order.name },
+    { Campo: "Azienda destinataria", Valore: order.company_name },
+    { Campo: "Stato", Valore: order.status },
+    { Campo: "Creato", Valore: formatDate(order.created_at as string) }
+  ];
   const rows = (order.items as Array<Record<string, unknown>>).map((item) => ({
     Prodotto: item.name,
     Categoria: item.category,
@@ -28,6 +40,7 @@ export async function createXlsx(orderId: number) {
     Note: item.notes ?? ""
   }));
   const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(metaRows), "Lista");
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows), "Ordine");
   return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
 }
@@ -45,7 +58,9 @@ export async function createPdf(orderId: number) {
     doc.on("end", () => resolve(Buffer.concat(chunks)));
 
     doc.fontSize(20).text(order.name as string, { underline: true });
-    doc.moveDown(0.5).fontSize(10).text(`Creato: ${formatDate(order.created_at as string)}`);
+    doc.moveDown(0.5).fontSize(11).text(`Azienda destinataria: ${String(order.company_name)}`);
+    doc.moveDown(0.2).fontSize(10).text(`Creato: ${formatDate(order.created_at as string)}`);
+    doc.moveDown(0.2).fontSize(10).text(`Stato: ${String(order.status)}`);
     doc.moveDown(1);
 
     doc.fontSize(11).text("Prodotto", 44, doc.y, { width: 190, continued: true });
